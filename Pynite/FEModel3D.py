@@ -307,7 +307,7 @@ class FEModel3D():
         return name
 
     def add_member(self, name:str, i_node:str, j_node:str, material_name:str, section_name:str,
-                    rotation: float = 0.0, tension_only: bool = False, comp_only:bool = False) -> str:
+                    rotation: float = 0.0, tension_only: bool = False, comp_only:bool = False, segments:int = 1) -> str:
         """Adds a new physical member to the model.
 
         :param name: A unique user-defined name for the member. If ``None`` or ``""``, a name will be automatically assigned

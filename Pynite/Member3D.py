@@ -558,8 +558,12 @@ class Member3D():
                     [0, sin(theta), cos(theta)]])
 
             # Rotate the y and z axes about the x axis
-            y = R @ y
-            z = R @ z
+            xyz = array([x, y, z])
+            xyz_rotated = R @ xyz
+
+            x = xyz_rotated[0, :]
+            y = xyz_rotated[1, :]
+            z = xyz_rotated[2, :]
 
         # Create the direction cosines matrix
         dirCos = array([x, y, z])
