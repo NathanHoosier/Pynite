@@ -64,7 +64,7 @@ class SteelSection(Section):
     def __init__(self, model, name, A, Iy, Iz, J, Zy, Zz, material_name):
 
         # Basic section properties
-        super().__init__(model, name, A, Iy, Iz, J, material_name)
+        super().__init__(model, name, A, Iy, Iz, J)
 
         # Additional section properties for steel
         self.ry = (Iy/A)**0.5

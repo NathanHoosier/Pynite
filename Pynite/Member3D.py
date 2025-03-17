@@ -73,6 +73,23 @@ class Member3D():
         self.model = model
 
 #%%
+    def modify_section(self, section_name):
+        '''
+        Modifies the section of the member.
+
+        Parameters
+        ----------
+
+        section_name : str
+            The name of the section to assign to the member.
+        '''
+
+        try:
+            self.section = self.model.sections[section_name] # The element's section
+        except KeyError:
+            raise NameError(f"No section named '{section_name}")
+
+#%%
     def L(self):
         """
         Returns the length of the member.
@@ -134,6 +151,7 @@ class Member3D():
     def _k_unc(self):
         """
         Returns the uncondensed local stiffness matrix for the member.
+        Uses Axial, Bending (Euler-Bernoulli), and Shear (Timoshenko) stiffness
         """
 
         # Get the properties needed to form the local stiffness matrix
@@ -143,23 +161,46 @@ class Member3D():
         Iz = self.section.Iz
         J = self.section.J
         A = self.section.A
+        Ay = A/1.2
+        Az = A/2.4
         L = self.L()
         
+        shear_y = (12 * E * Iy) / (G * Ay * L**2)
+        shear_z = (12 * E * Iz) / (G * Az * L**2)
+
+        shear_bar_y = 1 / (1 + shear_y)
+        shear_bar_z = 1 / (1 + shear_z)
+
+        # # Create the uncondensed local stiffness matrix
+        # #                ux      uy                         uz                         rx      ry                              rz                              ux      uy                         uz                         rx      ry                              rz
+        # k = array([     [A*E/L,  0,                         0,                         0,      0,                              0,                              -A*E/L, 0,                         0,                         0,      0,                              0                             ],
+        #                 [0,      12*shear_bar_z*E*Iz/L**3,  0,                         0,      0,                              6*shear_bar_z*E*Iz/L**2,        0,      -12*shear_bar_z*E*Iz/L**3, 0,                         0,      0,                              6*shear_bar_z*E*Iz/L**2       ],
+        #                 [0,      0,                         12*shear_bar_y*E*Iy/L**3,  0,      -6*shear_bar_y*E*Iy/L**2,       0,                              0,      0,                         -12*shear_bar_y*E*Iy/L**3, 0,      -6*shear_bar_y*E*Iy/L**2,       0                             ],
+        #                 [0,      0,                         0,                         G*J/L,  0,                              0,                              0,      0,                         0,                         -G*J/L, 0,                              0                             ],
+        #                 [0,      0,                         -6*shear_bar_y*E*Iy/L**2,  0,      (4+shear_y)*shear_bar_y*E*Iy/L, 0,                              0,      0,                         6*shear_bar_y*E*Iy/L**2,   0,      (2-shear_y)*shear_bar_y*E*Iy/L, 0                             ],
+        #                 [0,      6*shear_bar_z*E*Iz/L**2,   0,                         0,      0,                              (4+shear_z)*shear_bar_z*E*Iz/L, 0,      -6*shear_bar_z*E*Iz/L**2,  0,                         0,      0,                              (2-shear_z)*shear_bar_z*E*Iz/L],
+        #                 [-A*E/L, 0,                         0,                         0,      0,                              0,                              A*E/L,  0,                         0,                         0,      0,                              0                             ],
+        #                 [0,      -12*shear_bar_z*E*Iz/L**3, 0,                         0,      0,                              -6*shear_bar_z*E*Iz/L**2,       0,      12*shear_bar_z*E*Iz/L**3,  0,                         0,      0,                              -6*shear_bar_z*E*Iz/L**2      ],
+        #                 [0,      0,                         -12*shear_bar_y*E*Iy/L**3, 0,      6*shear_bar_y*E*Iy/L**2,        0,                              0,      0,                         12*shear_bar_y*E*Iy/L**3,  0,      6*shear_bar_y*E*Iy/L**2,        0                             ],
+        #                 [0,      0,                         0,                         -G*J/L, 0,                              0,                              0,      0,                         0,                         G*J/L,  0,                              0                             ],
+        #                 [0,      0,                         -6*shear_bar_y*E*Iy/L**2,  0,      (2-shear_y)*shear_bar_y*E*Iy/L, 0,                              0,      0,                         6*shear_bar_y*E*Iy/L**2,   0,      (4+shear_y)*shear_bar_y*E*Iy/L, 0                             ],
+        #                 [0,      6*shear_bar_z*E*Iz/L**2,   0,                         0,      0,                              (2-shear_z)*shear_bar_z*E*Iz/L, 0,      -6*shear_bar_z*E*Iz/L**2,  0,                         0,      0,                              (4+shear_z)*shear_bar_z*E*Iz/L]
+        #                 ])
+
         # Create the uncondensed local stiffness matrix
         k = array([[A*E/L,  0,             0,             0,      0,            0,            -A*E/L, 0,             0,             0,      0,            0],
-                    [0,      12*E*Iz/L**3,  0,             0,      0,            6*E*Iz/L**2,  0,      -12*E*Iz/L**3, 0,             0,      0,            6*E*Iz/L**2],
-                    [0,      0,             12*E*Iy/L**3,  0,      -6*E*Iy/L**2, 0,            0,      0,             -12*E*Iy/L**3, 0,      -6*E*Iy/L**2, 0],
-                    [0,      0,             0,             G*J/L,  0,            0,            0,      0,             0,             -G*J/L, 0,            0],
-                    [0,      0,             -6*E*Iy/L**2,  0,      4*E*Iy/L,     0,            0,      0,             6*E*Iy/L**2,   0,      2*E*Iy/L,     0],
-                    [0,      6*E*Iz/L**2,   0,             0,      0,            4*E*Iz/L,     0,      -6*E*Iz/L**2,  0,             0,      0,            2*E*Iz/L],
-                    [-A*E/L, 0,             0,             0,      0,            0,            A*E/L,  0,             0,             0,      0,            0],
-                    [0,      -12*E*Iz/L**3, 0,             0,      0,            -6*E*Iz/L**2, 0,      12*E*Iz/L**3,  0,             0,      0,            -6*E*Iz/L**2],
-                    [0,      0,             -12*E*Iy/L**3, 0,      6*E*Iy/L**2,  0,            0,      0,             12*E*Iy/L**3,  0,      6*E*Iy/L**2,  0],
-                    [0,      0,             0,             -G*J/L, 0,            0,            0,      0,             0,             G*J/L,  0,            0],
-                    [0,      0,             -6*E*Iy/L**2,  0,      2*E*Iy/L,     0,            0,      0,             6*E*Iy/L**2,   0,      4*E*Iy/L,     0],
-                    [0,      6*E*Iz/L**2,   0,             0,      0,            2*E*Iz/L,     0,      -6*E*Iz/L**2,  0,             0,      0,            4*E*Iz/L]])
-        
-        # Return the uncondensed local stiffness matrix
+                   [0,      12*E*Iz/L**3,  0,             0,      0,            6*E*Iz/L**2,  0,      -12*E*Iz/L**3, 0,             0,      0,            6*E*Iz/L**2],
+                   [0,      0,             12*E*Iy/L**3,  0,      -6*E*Iy/L**2, 0,            0,      0,             -12*E*Iy/L**3, 0,      -6*E*Iy/L**2, 0],
+                   [0,      0,             0,             G*J/L,  0,            0,            0,      0,             0,             -G*J/L, 0,            0],
+                   [0,      0,             -6*E*Iy/L**2,  0,      4*E*Iy/L,     0,            0,      0,             6*E*Iy/L**2,   0,      2*E*Iy/L,     0],
+                   [0,      6*E*Iz/L**2,   0,             0,      0,            4*E*Iz/L,     0,      -6*E*Iz/L**2,  0,             0,      0,            2*E*Iz/L],
+                   [-A*E/L, 0,             0,             0,      0,            0,            A*E/L,  0,             0,             0,      0,            0],
+                   [0,      -12*E*Iz/L**3, 0,             0,      0,            -6*E*Iz/L**2, 0,      12*E*Iz/L**3,  0,             0,      0,            -6*E*Iz/L**2],
+                   [0,      0,             -12*E*Iy/L**3, 0,      6*E*Iy/L**2,  0,            0,      0,             12*E*Iy/L**3,  0,      6*E*Iy/L**2,  0],
+                   [0,      0,             0,             -G*J/L, 0,            0,            0,      0,             0,             G*J/L,  0,            0],
+                   [0,      0,             -6*E*Iy/L**2,  0,      2*E*Iy/L,     0,            0,      0,             6*E*Iy/L**2,   0,      4*E*Iy/L,     0],
+                   [0,      6*E*Iz/L**2,   0,             0,      0,            2*E*Iz/L,     0,      -6*E*Iz/L**2,  0,             0,      0,            4*E*Iz/L]])
+
         return k
 
 #%%

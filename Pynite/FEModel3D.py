@@ -253,6 +253,32 @@ class FEModel3D():
         #Return the section name
         return name
 
+    def modify_member_steel_section(self, member_name:str, section_name:str) -> None:
+        ''' 
+        Modifies the steel section of a member
+
+        Parameters
+        ----------
+
+        member_name: str
+            The name of the member to modify
+        section_name: str
+            The name of the new steel section to assign to the member
+        '''
+
+        # Check if the member exists
+        if member_name not in self.members:
+            raise ValueError(f"Member '{member_name}' does not exist in the model")
+        if section_name not in self.sections:
+            raise ValueError(f"Section '{section_name}' does not exist in the model")
+        if not isinstance(self.sections[section_name], SteelSection):
+            raise ValueError(f"Section '{section_name}' is not a steel section")
+        
+        member = self.members[member_name]
+        member.modify_section(section_name)
+        
+
+
     def add_spring(self, name:str, i_node:str, j_node:str, ks:float, tension_only: bool=False, comp_only: bool=False) -> str:
         """Adds a new spring to the model.
 
